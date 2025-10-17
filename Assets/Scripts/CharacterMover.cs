@@ -17,6 +17,7 @@ public class CharacterMover : MonoBehaviour
     GroundDetector gd;
     public float airSpeedFollowup = 1f;
     float airSpeedFollowupCurrent;
+    InputSystem_Actions input;
     public Vector3 velocity { get; private set; }
     public float velocityAngular { get; private set; }
     public Vector3 velocityAxis { get; private set; }
@@ -29,12 +30,14 @@ public class CharacterMover : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         gd = GetComponent<GroundDetector>();
         gd.groundedUp.AddListener(DroppedOff);
+        input = new InputSystem_Actions();
+        input.Enable();
     }
     private void Update()
     {
-        if (gd.grounded && Input.GetButtonDown("Jump"))
+        if (gd.grounded && input.Player.Jump.WasPressedThisFrame())
         {
-            rb.velocity = transform.up * jumpForce;
+            rb.linearVelocity = transform.up * jumpForce;
         }
     }
     void FixedUpdate()
@@ -65,13 +68,15 @@ public class CharacterMover : MonoBehaviour
     {
         if (gd.grounded)
         {
-            Vector3 mov = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
+            Vector3 mov = input.Player.Move.ReadValue<Vector2>();
+            mov.z = mov.y;
+            mov.y = 0;
             float magnitude = Mathf.Clamp01(mov.magnitude);
             if (magnitude > 0)
             {
                 mov = cam.transform.TransformDirection(mov);
 
-                mov = Vector3.ProjectOnPlane(mov, transform.up);
+                mov.y = 0;
 
                 mov = mov.normalized * magnitude;
             }
@@ -95,7 +100,7 @@ public class CharacterMover : MonoBehaviour
     {
         if (airSpeedFollowupCurrent > 0)
         {
-            rb.velocity += transform.TransformDirection(velocity * airSpeedFollowupCurrent - rb.velocity);
+            rb.linearVelocity += transform.TransformDirection(velocity * airSpeedFollowupCurrent - rb.linearVelocity);
         }
         airSpeedFollowupCurrent = 0;
     }
